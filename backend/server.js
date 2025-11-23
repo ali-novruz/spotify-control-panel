@@ -154,6 +154,8 @@ app.get('/auth/callback', async (req, res) => {
       expires_at: Date.now() + expires_in * 1000,
     });
     
+    console.log('✅ Token stored successfully. Total sessions:', Array.from(tokenStore.keys()).filter(k => k.startsWith('session:')).length);
+    
     // Return success page with session token
     res.send(`
       <html>
@@ -253,6 +255,7 @@ app.post('/auth/verify', async (req, res) => {
     // Get stored tokens
     const tokens = tokenStore.get(`session:${sessionToken}`);
     if (!tokens) {
+      console.error('Session not found. Available sessions:', Array.from(tokenStore.keys()).filter(k => k.startsWith('session:')).length);
       return res.status(401).json({ error: 'Session not found' });
     }
     
@@ -328,6 +331,8 @@ setInterval(() => {
 app.listen(PORT, () => {
   console.log(`🚀 Spotify Auth Backend running on port ${PORT}`);
   console.log(`📍 Backend URL: ${BACKEND_URL}`);
-  console.log(`🔑 Make sure to set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET in .env`);
+  console.log(`🔑 Client ID: ${SPOTIFY_CLIENT_ID ? '✅ Set' : '❌ Missing'}`);
+  console.log(`🔑 Client Secret: ${SPOTIFY_CLIENT_SECRET ? '✅ Set' : '❌ Missing'}`);
+  console.log(`🔐 JWT Secret: ${JWT_SECRET ? '✅ Set' : '❌ Missing'} (${JWT_SECRET ? JWT_SECRET.substring(0, 8) + '...' : 'N/A'})`);
 });
 
