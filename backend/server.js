@@ -3,6 +3,8 @@ const axios = require('axios');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -12,8 +14,33 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// In-memory token storage (production'da database kullan)
-const tokenStore = new Map();
+// Persistent token storage
+const TOKEN_FILE = path.join(__dirname, 'tokens.json');
+
+// Load tokens from file on startup
+let tokenStore = new Map();
+try {
+  if (fs.existsSync(TOKEN_FILE)) {
+    const data = JSON.parse(fs.readFileSync(TOKEN_FILE, 'utf8'));
+    tokenStore = new Map(Object.entries(data));
+    console.log(`📦 Loaded ${tokenStore.size} tokens from storage`);
+  }
+} catch (error) {
+  console.error('Error loading tokens:', error);
+}
+
+// Save tokens to file
+function saveTokens() {
+  try {
+    const data = Object.fromEntries(tokenStore);
+    fs.writeFileSync(TOKEN_FILE, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error('Error saving tokens:', error);
+  }
+}
+
+// Save tokens every 5 seconds
+setInterval(saveTokens, 5000);
 
 // Spotify API credentials (environment variables'dan al)
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
@@ -49,6 +76,7 @@ app.get('/auth/start', (req, res) => {
   
   // Store state temporarily (expires in 10 minutes)
   tokenStore.set(`state:${state}`, { timestamp: Date.now(), expiresAt: Date.now() + 10 * 60 * 1000 });
+  saveTokens();
   
   const authUrl = `${SPOTIFY_AUTH_URL}?${new URLSearchParams({
     response_type: 'code',
@@ -116,6 +144,7 @@ app.get('/auth/callback', async (req, res) => {
   
   // Clean up state
   tokenStore.delete(`state:${state}`);
+  saveTokens();
   
   try {
     // Exchange code for tokens
@@ -153,6 +182,7 @@ app.get('/auth/callback', async (req, res) => {
       refresh_token,
       expires_at: Date.now() + expires_in * 1000,
     });
+    saveTokens();
     
     console.log('✅ Token stored successfully. Total sessions:', Array.from(tokenStore.keys()).filter(k => k.startsWith('session:')).length);
     
@@ -308,6 +338,7 @@ app.post('/auth/logout', (req, res) => {
   
   if (sessionToken) {
     tokenStore.delete(`session:${sessionToken}`);
+    saveTokens();
   }
   
   res.json({ message: 'Logged out successfully' });
