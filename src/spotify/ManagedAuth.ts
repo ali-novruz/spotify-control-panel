@@ -62,6 +62,12 @@ export class ManagedAuth {
       }
     } catch (error: any) {
       console.error('Verify token error:', error.response?.data || error.message);
+      
+      // If session not found, clear the stored token
+      if (error.response?.status === 401 || error.response?.data?.error?.includes('Session not found')) {
+        await this.context.secrets.delete(ManagedAuth.SESSION_TOKEN_KEY);
+      }
+      
       throw new Error(error.response?.data?.error || error.message);
     }
   }
@@ -88,6 +94,13 @@ export class ManagedAuth {
 
     } catch (error: any) {
       console.error('Failed to get access token:', error.response?.data || error.message);
+      
+      // If session not found or expired, clear the stored token
+      if (error.response?.status === 401 || error.response?.data?.error?.includes('Session not found')) {
+        console.log('Session expired or invalid, clearing stored token');
+        await this.context.secrets.delete(ManagedAuth.SESSION_TOKEN_KEY);
+      }
+      
       return null;
     }
   }
