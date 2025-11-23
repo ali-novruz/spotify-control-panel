@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import * as vscode from 'vscode';
-import { SpotifyAuth } from './SpotifyAuth';
+import { ManagedAuth } from './ManagedAuth';
 import { SpotifyPlaybackState, CurrentTrackInfo } from './types';
 
 /**
@@ -10,7 +10,7 @@ export class SpotifyClient {
   private static readonly API_BASE_URL = 'https://api.spotify.com/v1';
   private axiosInstance: AxiosInstance;
 
-  constructor(private auth: SpotifyAuth) {
+  constructor(private auth: ManagedAuth) {
     this.axiosInstance = axios.create({
       baseURL: SpotifyClient.API_BASE_URL,
     });

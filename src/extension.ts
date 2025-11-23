@@ -1,12 +1,10 @@
 import * as vscode from 'vscode';
-import { SpotifyAuth } from './spotify/SpotifyAuth';
+import { ManagedAuth } from './spotify/ManagedAuth';
 import { SpotifyClient } from './spotify/SpotifyClient';
-import { SpotifyPanelProvider } from './panel/SpotifyPanelProvider';
 import { SpotifyStatusBar } from './statusbar/SpotifyStatusBar';
 
-let spotifyAuth: SpotifyAuth;
+let managedAuth: ManagedAuth;
 let spotifyClient: SpotifyClient;
-let spotifyPanelProvider: SpotifyPanelProvider;
 let spotifyStatusBar: SpotifyStatusBar;
 
 /**
@@ -15,26 +13,12 @@ let spotifyStatusBar: SpotifyStatusBar;
 export function activate(context: vscode.ExtensionContext) {
   console.log('Spotify Control Panel extension is now active');
 
-  // Initialize Spotify services
-  spotifyAuth = new SpotifyAuth(context);
-  spotifyClient = new SpotifyClient(spotifyAuth);
-
-  // Register the WebviewView provider
-  spotifyPanelProvider = new SpotifyPanelProvider(
-    context.extensionUri,
-    spotifyClient,
-    spotifyAuth
-  );
-
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(
-      SpotifyPanelProvider.viewType,
-      spotifyPanelProvider
-    )
-  );
+  // Initialize Spotify services with Managed Auth
+  managedAuth = new ManagedAuth(context);
+  spotifyClient = new SpotifyClient(managedAuth);
 
   // Initialize Status Bar
-  spotifyStatusBar = new SpotifyStatusBar(spotifyClient, spotifyAuth);
+  spotifyStatusBar = new SpotifyStatusBar(spotifyClient, managedAuth);
   context.subscriptions.push(spotifyStatusBar);
 
   // Register commands
@@ -55,23 +39,6 @@ function registerCommands(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('spotify.authenticate', async () => {
       try {
-        // Check if credentials are configured
-        const config = vscode.workspace.getConfiguration('spotify');
-        const clientId = config.get<string>('clientId', '');
-        const clientSecret = config.get<string>('clientSecret', '');
-
-        if (!clientId || !clientSecret) {
-          const result = await vscode.window.showErrorMessage(
-            'Spotify credentials not configured. Please set your Client ID and Client Secret in settings.',
-            'Open Settings'
-          );
-          if (result === 'Open Settings') {
-            vscode.commands.executeCommand('workbench.action.openSettings', 'spotify');
-          }
-          return;
-        }
-
-        // Show progress
         await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
@@ -79,11 +46,13 @@ function registerCommands(context: vscode.ExtensionContext) {
             cancellable: false,
           },
           async () => {
-            await spotifyAuth.authenticate();
+            await managedAuth.authenticate();
           }
         );
-
-        vscode.window.showInformationMessage('Successfully authenticated with Spotify!');
+        // Refresh status bar after successful authentication
+        if (spotifyStatusBar) {
+          spotifyStatusBar.forceRefresh();
+        }
       } catch (error: any) {
         vscode.window.showErrorMessage(`Authentication failed: ${error.message}`);
       }
@@ -160,8 +129,12 @@ function registerCommands(context: vscode.ExtensionContext) {
           'No'
         );
         if (result === 'Yes') {
-          await spotifyAuth.logout();
+          await managedAuth.logout();
           vscode.window.showInformationMessage('Successfully logged out from Spotify');
+          // Refresh status bar after logout
+          if (spotifyStatusBar) {
+            spotifyStatusBar.forceRefresh();
+          }
         }
       } catch (error: any) {
         vscode.window.showErrorMessage(`Logout failed: ${error.message}`);
@@ -184,21 +157,13 @@ function registerCommands(context: vscode.ExtensionContext) {
  */
 async function showWelcomeMessage(context: vscode.ExtensionContext) {
   const result = await vscode.window.showInformationMessage(
-    'Welcome to Spotify Control Panel! To get started, you need to configure your Spotify API credentials.',
-    'Setup Guide',
-    'Open Settings',
+    'Welcome to Spotify Control Panel! Click Authenticate to connect your Spotify account.',
+    'Authenticate',
     'Dismiss'
   );
 
-  if (result === 'Setup Guide') {
-    vscode.env.openExternal(
-      vscode.Uri.parse('https://developer.spotify.com/dashboard/applications')
-    );
-    vscode.window.showInformationMessage(
-      'Create a Spotify app, then add your Client ID and Client Secret in VS Code settings (search for "Spotify").'
-    );
-  } else if (result === 'Open Settings') {
-    vscode.commands.executeCommand('workbench.action.openSettings', 'spotify');
+  if (result === 'Authenticate') {
+    vscode.commands.executeCommand('spotify.authenticate');
   }
 
   context.globalState.update('hasShownWelcome', true);
@@ -208,9 +173,6 @@ async function showWelcomeMessage(context: vscode.ExtensionContext) {
  * Extension deactivation
  */
 export function deactivate() {
-  if (spotifyPanelProvider) {
-    spotifyPanelProvider.stopPeriodicUpdates();
-  }
   if (spotifyStatusBar) {
     spotifyStatusBar.dispose();
   }

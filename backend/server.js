@@ -47,8 +47,8 @@ app.get('/health', (req, res) => {
 app.get('/auth/start', (req, res) => {
   const state = crypto.randomBytes(16).toString('hex');
   
-  // Store state temporarily (expires in 5 minutes)
-  tokenStore.set(`state:${state}`, { timestamp: Date.now() });
+  // Store state temporarily (expires in 10 minutes)
+  tokenStore.set(`state:${state}`, { timestamp: Date.now(), expiresAt: Date.now() + 10 * 60 * 1000 });
   
   const authUrl = `${SPOTIFY_AUTH_URL}?${new URLSearchParams({
     response_type: 'code',
@@ -87,7 +87,31 @@ app.get('/auth/callback', async (req, res) => {
   // Verify state
   const storedState = tokenStore.get(`state:${state}`);
   if (!storedState) {
-    return res.status(400).send('Invalid state');
+    return res.status(400).send(`
+      <html>
+        <body style="font-family: Arial; text-align: center; padding: 50px;">
+          <h1>❌ Invalid State</h1>
+          <p>Authentication session expired or invalid.</p>
+          <p>Please try authenticating again from VS Code.</p>
+          <button onclick="window.close()" style="padding: 10px 20px; background: #1DB954; color: white; border: none; border-radius: 5px; cursor: pointer;">Close Window</button>
+        </body>
+      </html>
+    `);
+  }
+  
+  // Check if state expired
+  if (Date.now() > storedState.expiresAt) {
+    tokenStore.delete(`state:${state}`);
+    return res.status(400).send(`
+      <html>
+        <body style="font-family: Arial; text-align: center; padding: 50px;">
+          <h1>⏰ Session Expired</h1>
+          <p>Authentication took too long (max 10 minutes).</p>
+          <p>Please try authenticating again from VS Code.</p>
+          <button onclick="window.close()" style="padding: 10px 20px; background: #1DB954; color: white; border: none; border-radius: 5px; cursor: pointer;">Close Window</button>
+        </body>
+      </html>
+    `);
   }
   
   // Clean up state

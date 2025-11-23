@@ -52,12 +52,17 @@ export class ManagedAuth {
    * Verify session token and get access token
    */
   private async verifyToken(sessionToken: string): Promise<void> {
-    const response = await axios.post(`${ManagedAuth.BACKEND_URL}/auth/verify`, {
-      sessionToken,
-    });
+    try {
+      const response = await axios.post(`${ManagedAuth.BACKEND_URL}/auth/verify`, {
+        sessionToken,
+      });
 
-    if (!response.data.access_token) {
-      throw new Error('Invalid session token');
+      if (!response.data.access_token) {
+        throw new Error('Invalid session token');
+      }
+    } catch (error: any) {
+      console.error('Verify token error:', error.response?.data || error.message);
+      throw new Error(error.response?.data?.error || error.message);
     }
   }
 
@@ -68,28 +73,31 @@ export class ManagedAuth {
     const sessionToken = await this.context.secrets.get(ManagedAuth.SESSION_TOKEN_KEY);
     
     if (!sessionToken) {
+      console.log('No session token found in storage');
       return null;
     }
 
     try {
+      console.log('Verifying session token with backend...');
       const response = await axios.post(`${ManagedAuth.BACKEND_URL}/auth/verify`, {
         sessionToken,
       });
 
+      console.log('Access token received successfully');
       return response.data.access_token;
 
     } catch (error: any) {
-      console.error('Failed to get access token:', error.message);
+      console.error('Failed to get access token:', error.response?.data || error.message);
       return null;
     }
   }
 
   /**
-   * Check if user is authenticated
+   * Check if user is authenticated (quick check - just checks if token exists)
    */
   async isAuthenticated(): Promise<boolean> {
-    const token = await this.getValidAccessToken();
-    return token !== null;
+    const sessionToken = await this.context.secrets.get(ManagedAuth.SESSION_TOKEN_KEY);
+    return sessionToken !== null && sessionToken !== undefined;
   }
 
   /**

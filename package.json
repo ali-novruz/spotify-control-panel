@@ -39,24 +39,6 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "spotify-control",
-          "title": "Spotify",
-          "icon": "$(music)"
-        }
-      ]
-    },
-    "views": {
-      "spotify-control": [
-        {
-          "type": "webview",
-          "id": "spotifyControlPanel",
-          "name": "Control Panel"
-        }
-      ]
-    },
     "commands": [
       {
         "command": "spotify.authenticate",
@@ -138,7 +120,7 @@
         },
         "spotify.refreshInterval": {
           "type": "number",
-          "default": 1000,
+          "default": 3000,
           "description": "Interval (in milliseconds) to refresh playback status"
         }
       }

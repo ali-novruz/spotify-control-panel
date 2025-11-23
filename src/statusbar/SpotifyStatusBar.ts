@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SpotifyClient } from '../spotify/SpotifyClient';
-import { SpotifyAuth } from '../spotify/SpotifyAuth';
+import { ManagedAuth } from '../spotify/ManagedAuth';
 
 /**
  * Spotify Status Bar Controller
@@ -14,12 +14,14 @@ export class SpotifyStatusBar {
   private shuffleItem: vscode.StatusBarItem;
   private repeatItem: vscode.StatusBarItem;
   private volumeItem: vscode.StatusBarItem;
+  private logoutItem: vscode.StatusBarItem;
   private updateInterval?: NodeJS.Timeout;
   private currentVolume: number = 50;
+  private lastError: string | null = null;
 
   constructor(
     private spotifyClient: SpotifyClient,
-    private spotifyAuth: SpotifyAuth
+    private spotifyAuth: ManagedAuth
   ) {
     // Create status bar items (right to left order, priority determines position)
     this.trackItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -29,6 +31,7 @@ export class SpotifyStatusBar {
     this.shuffleItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 96);
     this.repeatItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 95);
     this.volumeItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 94);
+    this.logoutItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 93);
 
     // Set commands
     this.playPauseItem.command = 'spotify.playPause';
@@ -37,6 +40,7 @@ export class SpotifyStatusBar {
     this.shuffleItem.command = 'spotify.toggleShuffle';
     this.repeatItem.command = 'spotify.toggleRepeat';
     this.volumeItem.command = 'spotify.changeVolume';
+    this.logoutItem.command = 'spotify.logout';
 
     // Set tooltips
     this.playPauseItem.tooltip = 'Play/Pause (Ctrl+Alt+Space)';
@@ -45,6 +49,7 @@ export class SpotifyStatusBar {
     this.shuffleItem.tooltip = 'Toggle Shuffle';
     this.repeatItem.tooltip = 'Toggle Repeat';
     this.volumeItem.tooltip = 'Click to change volume';
+    this.logoutItem.tooltip = 'Logout from Spotify';
 
     // Show all items
     this.show();
@@ -64,6 +69,7 @@ export class SpotifyStatusBar {
     this.shuffleItem.show();
     this.repeatItem.show();
     this.volumeItem.show();
+    this.logoutItem.show();
   }
 
   /**
@@ -71,7 +77,7 @@ export class SpotifyStatusBar {
    */
   private startPeriodicUpdates() {
     const config = vscode.workspace.getConfiguration('spotify');
-    const interval = config.get<number>('refreshInterval', 1000);
+    const interval = config.get<number>('refreshInterval', 3000);
 
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
@@ -82,6 +88,13 @@ export class SpotifyStatusBar {
     }, interval);
 
     // Initial update
+    this.updateStatusBar();
+  }
+
+  /**
+   * Force immediate refresh (public method)
+   */
+  public forceRefresh() {
     this.updateStatusBar();
   }
 
@@ -101,6 +114,7 @@ export class SpotifyStatusBar {
         this.shuffleItem.hide();
         this.repeatItem.hide();
         this.volumeItem.hide();
+        this.logoutItem.hide();
         return;
       }
 
@@ -115,6 +129,8 @@ export class SpotifyStatusBar {
         this.shuffleItem.hide();
         this.repeatItem.hide();
         this.volumeItem.hide();
+        this.logoutItem.show();
+        this.logoutItem.text = '$(sign-out)';
         return;
       }
 
@@ -125,6 +141,8 @@ export class SpotifyStatusBar {
       this.shuffleItem.show();
       this.repeatItem.show();
       this.volumeItem.show();
+      this.logoutItem.show();
+      this.logoutItem.text = '$(sign-out)';
 
       // Update track info
       const progress = this.formatTime(trackInfo.progressMs);
@@ -163,14 +181,15 @@ export class SpotifyStatusBar {
       this.volumeItem.text = `${volumeIcon} ${this.currentVolume}%`;
 
     } catch (error: any) {
-      this.trackItem.text = '$(music) Spotify: Error';
-      this.trackItem.tooltip = error.message;
-      this.playPauseItem.hide();
-      this.nextItem.hide();
-      this.previousItem.hide();
-      this.shuffleItem.hide();
-      this.repeatItem.hide();
-      this.volumeItem.hide();
+      // Only show error if it's different from last error (avoid spam)
+      const errorMsg = error.message || 'Unknown error';
+      if (this.lastError !== errorMsg) {
+        console.error('Status bar update error:', errorMsg);
+        this.lastError = errorMsg;
+      }
+      
+      // Keep showing last known state instead of error
+      // This prevents flickering between error and success states
     }
   }
 
@@ -226,6 +245,7 @@ export class SpotifyStatusBar {
     this.shuffleItem.dispose();
     this.repeatItem.dispose();
     this.volumeItem.dispose();
+    this.logoutItem.dispose();
   }
 }
 
