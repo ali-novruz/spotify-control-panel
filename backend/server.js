@@ -289,13 +289,21 @@ app.post('/auth/verify', async (req, res) => {
       return res.status(401).json({ error: 'Session not found' });
     }
     
-    // Check if access token is expired
+    // Check if access token is expired (refresh 5 minutes before expiry)
     if (Date.now() >= tokens.expires_at - 5 * 60 * 1000) {
-      // Refresh token
-      const refreshed = await refreshAccessToken(tokens.refresh_token);
-      tokens.access_token = refreshed.access_token;
-      tokens.expires_at = Date.now() + refreshed.expires_in * 1000;
-      tokenStore.set(`session:${sessionToken}`, tokens);
+      console.log('🔄 Token expired, refreshing...');
+      try {
+        // Refresh token
+        const refreshed = await refreshAccessToken(tokens.refresh_token);
+        tokens.access_token = refreshed.access_token;
+        tokens.expires_at = Date.now() + refreshed.expires_in * 1000;
+        tokenStore.set(`session:${sessionToken}`, tokens);
+        saveTokens(); // SAVE TO FILE!
+        console.log('✅ Token refreshed successfully');
+      } catch (error) {
+        console.error('❌ Token refresh failed:', error.message);
+        return res.status(401).json({ error: 'Failed to refresh token. Please re-authenticate.' });
+      }
     }
     
     res.json({

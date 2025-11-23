@@ -106,11 +106,21 @@ export class ManagedAuth {
   }
 
   /**
-   * Check if user is authenticated (quick check - just checks if token exists)
+   * Check if user is authenticated (checks if token exists and is valid)
    */
   async isAuthenticated(): Promise<boolean> {
     const sessionToken = await this.context.secrets.get(ManagedAuth.SESSION_TOKEN_KEY);
-    return sessionToken !== null && sessionToken !== undefined;
+    if (!sessionToken) {
+      return false;
+    }
+
+    // Quick validation - try to get access token
+    try {
+      const accessToken = await this.getValidAccessToken();
+      return accessToken !== null;
+    } catch (error) {
+      return false;
+    }
   }
 
   /**

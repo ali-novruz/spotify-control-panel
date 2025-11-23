@@ -120,7 +120,7 @@
         },
         "spotify.refreshInterval": {
           "type": "number",
-          "default": 3000,
+          "default": 5000,
           "description": "Interval (in milliseconds) to refresh playback status"
         }
       }

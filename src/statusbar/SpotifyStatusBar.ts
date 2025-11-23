@@ -77,7 +77,7 @@ export class SpotifyStatusBar {
    */
   private startPeriodicUpdates() {
     const config = vscode.workspace.getConfiguration('spotify');
-    const interval = config.get<number>('refreshInterval', 3000);
+    const interval = config.get<number>('refreshInterval', 5000);
 
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
