@@ -1,0 +1,166 @@
+{
+  "name": "spotify-control-panel",
+  "displayName": "Spotify Control Panel",
+  "description": "Control Spotify playback directly from VS Code with status bar integration, keyboard shortcuts, and real-time updates",
+  "version": "1.0.0",
+  "publisher": "nevin",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "spotify",
+    "music",
+    "player",
+    "control",
+    "playback",
+    "audio",
+    "media",
+    "status bar"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nevin/spotify-control-panel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nevin/spotify-control-panel/issues"
+  },
+  "homepage": "https://github.com/nevin/spotify-control-panel#readme",
+  "license": "MIT",
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#1DB954",
+    "theme": "dark"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "spotify-control",
+          "title": "Spotify",
+          "icon": "$(music)"
+        }
+      ]
+    },
+    "views": {
+      "spotify-control": [
+        {
+          "type": "webview",
+          "id": "spotifyControlPanel",
+          "name": "Control Panel"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "spotify.authenticate",
+        "title": "Spotify: Authenticate"
+      },
+      {
+        "command": "spotify.playPause",
+        "title": "Spotify: Play/Pause"
+      },
+      {
+        "command": "spotify.nextTrack",
+        "title": "Spotify: Next Track"
+      },
+      {
+        "command": "spotify.previousTrack",
+        "title": "Spotify: Previous Track"
+      },
+      {
+        "command": "spotify.toggleShuffle",
+        "title": "Spotify: Toggle Shuffle"
+      },
+      {
+        "command": "spotify.toggleRepeat",
+        "title": "Spotify: Toggle Repeat"
+      },
+      {
+        "command": "spotify.logout",
+        "title": "Spotify: Logout"
+      },
+      {
+        "command": "spotify.changeVolume",
+        "title": "Spotify: Change Volume"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "spotify.playPause",
+        "key": "ctrl+alt+space",
+        "mac": "cmd+alt+space"
+      },
+      {
+        "command": "spotify.nextTrack",
+        "key": "ctrl+alt+right",
+        "mac": "cmd+alt+right"
+      },
+      {
+        "command": "spotify.previousTrack",
+        "key": "ctrl+alt+left",
+        "mac": "cmd+alt+left"
+      }
+    ],
+    "configuration": {
+      "title": "Spotify Control Panel",
+      "properties": {
+        "spotify.authMode": {
+          "type": "string",
+          "default": "managed",
+          "enum": ["managed", "self-hosted"],
+          "enumDescriptions": [
+            "Use managed authentication (recommended) - no setup required",
+            "Use your own Spotify app credentials"
+          ],
+          "description": "Authentication mode"
+        },
+        "spotify.clientId": {
+          "type": "string",
+          "default": "",
+          "description": "[Self-hosted only] Spotify Client ID from your Spotify Developer Dashboard"
+        },
+        "spotify.clientSecret": {
+          "type": "string",
+          "default": "",
+          "description": "[Self-hosted only] Spotify Client Secret from your Spotify Developer Dashboard"
+        },
+        "spotify.redirectUri": {
+          "type": "string",
+          "default": "http://127.0.0.1:8888/callback",
+          "description": "[Self-hosted only] Redirect URI configured in your Spotify app"
+        },
+        "spotify.refreshInterval": {
+          "type": "number",
+          "default": 1000,
+          "description": "Interval (in milliseconds) to refresh playback status"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^18.x",
+    "@types/vscode": "^1.75.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}
+
