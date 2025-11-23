@@ -7,7 +7,7 @@ import axios from 'axios';
  */
 export class ManagedAuth {
   private static readonly SESSION_TOKEN_KEY = 'spotify_managed_session';
-  private static readonly BACKEND_URL = 'https://spotify-backend-xxxxx.ondigitalocean.app'; // TODO: Replace xxxxx with your actual URL
+  private static readonly BACKEND_URL = 'https://urchin-app-hs7am.ondigitalocean.app';
 
   constructor(private context: vscode.ExtensionContext) {}
 
